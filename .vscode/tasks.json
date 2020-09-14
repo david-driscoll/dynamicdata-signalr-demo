@@ -1,0 +1,64 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "api-build",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/api/api.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "api-publish",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "publish",
+                "${workspaceFolder}/api/api.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "type": "func",
+            "command": "host start",
+            "options": {
+                "cwd": "${workspaceFolder}/api"
+            },
+            "problemMatcher": [
+                "$func-watch"
+            ],
+            "label": "func: host start"
+        },
+        {
+            "type": "npm",
+            "script": "build",
+            "group": "build",
+            "problemMatcher": [],
+            "label": "npm: build",
+            "detail": "vue-cli-service build"
+        },
+        {
+            "type": "npm",
+            "script": "serve",
+            "problemMatcher": [],
+            "label": "npm: serve",
+            "detail": "vue-cli-service serve"
+        },
+        {
+            "label": "build",
+            "group": "build",
+            "problemMatcher": [],
+            "dependsOn": [
+                "npm: serve",
+                "func: host start"
+            ]
+        }
+    ]
+}
