@@ -5,6 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="DynamicData" Version="6.16.9" />
+    <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.SignalRService" Version="1.2.0" />
     <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="3.0.9" />
     <PackageReference Include="System.Interactive" Version="4.1.1" />
     <PackageReference Include="System.Interactive.Async" Version="4.1.1" />
