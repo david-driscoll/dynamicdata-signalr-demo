@@ -4,6 +4,7 @@
         {
             "label": "api-build",
             "command": "dotnet",
+            "group": "build",
             "type": "process",
             "args": [
                 "build",
@@ -52,7 +53,7 @@
             "detail": "vue-cli-service serve"
         },
         {
-            "label": "build",
+            "label": "run",
             "group": "build",
             "problemMatcher": [],
             "dependsOn": [
