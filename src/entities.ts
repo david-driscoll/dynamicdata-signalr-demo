@@ -4,4 +4,5 @@ export interface Hero {
     team: string;
     universe: string;
     superPowers: string[];
+    avatarUrl: string;
 }

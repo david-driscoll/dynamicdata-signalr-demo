@@ -102,6 +102,7 @@ namespace Company.Function
         public string Team { get; set; }
         public string Universe { get; set; }
         public List<string> SuperPowers { get; set; } = new List<string>();
+        public string AvatarUrl { get; set; }
     }
 
     // public class OtherHub : ServerlessHub

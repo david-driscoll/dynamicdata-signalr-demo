@@ -1,28 +1,37 @@
 <template>
-    <div class="home">
-        <img alt="Vue logo" src="../assets/logo.png" />
-
-        <div v-for="hero in heroes" :key="hero.id">{{hero.name}}</div>
+    <div class="heroes">
+        <Hero v-for="hero in heroes" :key="hero.id" :hero="hero" class="hero" />
     </div>
 </template>
+
+<style scoped>
+.heroes {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+.hero {
+    margin: 12px 12px;
+}
+</style>
 
 <script lang="ts">
 import { defineComponent, ref, onBeforeMount, onUnmounted } from 'vue';
 import { bind, Change, SourceCache, NotifyChanged, asObservableCache, IChangeSet } from 'dynamicdatajs';
 import { Observable } from 'rxjs';
-import { Hero } from '../entities';
+import { Hero as HeroModel } from '../entities';
 import { HubConnectionBuilder } from '@microsoft/signalr';
-import HelloWorld from '@/components/HelloWorld.vue'; // @ is an alias to /src
+import Hero from '@/components/Hero.vue'; // @ is an alias to /src
 
 export default defineComponent({
     name: 'Home',
     setup() {
         const connection = new HubConnectionBuilder().withUrl('/api').build();
 
-        const heroes = ref<Hero[]>([]);
+        const heroes = ref<HeroModel[]>([]);
 
-        const heroStream = new Observable<IChangeSet<Hero, string>>(observer => {
-            const handler = (hero: IChangeSet<Hero, string>) => {
+        const heroStream = new Observable<IChangeSet<HeroModel, string>>(observer => {
+            const handler = (hero: IChangeSet<HeroModel, string>) => {
                 observer.next(hero);
                 console.log(hero);
             };
@@ -48,7 +57,7 @@ export default defineComponent({
         };
     },
     components: {
-        // HelloWorld,
+        Hero,
     },
 });
 </script>
