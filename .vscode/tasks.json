@@ -53,12 +53,25 @@
             "detail": "vue-cli-service serve"
         },
         {
+            "label": "asrs-emulator",
+            "command": "dotnet",
+            "args": [
+                "asrs-emulator",
+                "start"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/api"
+            },
+            "problemMatcher": []
+        },
+        {
             "label": "run",
             "group": "build",
             "problemMatcher": [],
             "dependsOn": [
                 "npm: serve",
-                "func: host start"
+                "func: host start",
+                "asrs-emulator"
             ]
         }
     ]
