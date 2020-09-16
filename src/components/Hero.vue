@@ -4,18 +4,30 @@
         <div style="padding: 0 10px 10px; color: var(--neutral-foreground-rest)">
             <h2>{{hero.name}}</h2>
             <p></p>
+            <!--
+            <ul v-for="team in hero.teams" :key="team">
+                <li>{{team}}</li>
+            </ul>
+            -->
             <fast-button>Button</fast-button>
         </div>
     </fast-card>
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
+import { Hero } from '@/entities';
+import { computed, defineComponent, Prop, PropType } from 'vue';
 
 export default defineComponent({
-    name: 'HelloWorld',
+    name: 'Hero',
     props: {
-        hero: Object,
+        hero: {
+            type: Object as PropType<Hero>,
+            required: true,
+        },
+    },
+    setup(props) {
+        return {};
     },
 });
 </script>

@@ -3,7 +3,15 @@
         <router-link to="/">Home</router-link>|
         <router-link to="/about">About</router-link>
     </div>
-    <router-view />
+
+    <Suspense>
+        <template #default>
+            <router-view />
+        </template>
+        <template #fallback>
+            <fast-progress-ring />
+        </template>
+    </Suspense>
 </template>
 
 <script lang="ts">

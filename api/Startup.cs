@@ -28,7 +28,9 @@ namespace api
                 return settings;
             };
 
-            builder.Services.AddHttpClient();
+            builder.Services.AddHttpClient()
+                .AddHttpClient("SuperHeroApi")
+                .ConfigureHttpClient(z => z.BaseAddress = new Uri($"https://www.superheroapi.com/api.php/{Environment.GetEnvironmentVariable("HerosApiKey")}/"));
             builder.Services.AddSingleton(serviceProvider =>
             {
                 var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
