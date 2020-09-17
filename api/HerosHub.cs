@@ -16,6 +16,7 @@ namespace api
 {
     public class HerosHub : ServerlessHub
     {
+        private const int Max_Page_Size = 2;
         private readonly CosmosClient cosmosClient;
 
         public HerosHub(CosmosClient cosmosClient)
@@ -35,35 +36,20 @@ namespace api
             // await Clients.All.SendAsync(NewConnectionTarget, new NewConnection(invocationContext.ConnectionId));
             var container = cosmosClient.GetDatabase("Heros").GetContainer("Heros");
 
-            var changes = new List<Change<Hero, string>>();
-            var iterator = container.GetItemLinqQueryable<Hero>().ToFeedIterator();
+            var iterator = container.GetItemLinqQueryable<Hero>(requestOptions: new QueryRequestOptions() { MaxItemCount = Max_Page_Size }).ToFeedIterator();
+            // Dump results to users
             while (iterator.HasMoreResults)
             {
+                var changes = new List<Change<Hero, string>>();
                 var resultSet = await iterator.ReadNextAsync(cancellationToken);
                 foreach (var item in resultSet)
                 {
                     changes.Add(new Change<Hero, string>(ChangeReason.Add, item.Id, item));
                 }
+                await Clients.Client(invocationContext.ConnectionId).SendAsync("heroesStream", new ChangeSet<Hero, string>(changes), cancellationToken);
             }
 
-            await Clients.Client(invocationContext.ConnectionId).SendAsync("heroesStream", new ChangeSet<Hero, string>(changes), cancellationToken);
             logger.LogInformation($"{invocationContext.ConnectionId} has connected");
-        }
-
-        // [FunctionName(nameof(HerosHub) + nameof(Heros))]
-        // public ChannelReader<IChangeSet<Hero, Guid>> Heros([SignalRTrigger] InvocationContext invocationContext, CancellationToken cancellationToken)
-        // {
-
-        //     var container = cosmosClient.GetDatabase("Heros").GetContainer("Heros");
-        //     container.GetItemLinqQueryable<Hero>()
-        //     return PersonData.Instance.GetPeople().ConnectToChannel(cancellationToken, TaskPoolScheduler.Default);
-        // }
-
-        [FunctionName(nameof(Broadcast))]
-        public async Task Broadcast([SignalRTrigger] InvocationContext invocationContext, string message, ILogger logger)
-        {
-            // await Clients.All.SendAsync(NewMessageTarget, new NewMessage(invocationContext, message));
-            logger.LogInformation($"{invocationContext.ConnectionId} broadcast {message}");
         }
 
         [FunctionName(nameof(OnDisconnected))]
@@ -71,32 +57,4 @@ namespace api
         {
         }
     }
-
-    // public class OtherHub : ServerlessHub
-    // {
-    //     [FunctionName(nameof(OtherHub) + "negotiate")]
-    //     public SignalRConnectionInfo Negotiate([HttpTrigger(AuthorizationLevel.Anonymous, Route = "other/negotiate")] HttpRequest req)
-    //     {
-    //         return Negotiate();
-    //     }
-
-    //     [FunctionName(nameof(OtherHub) + nameof(OnConnected))]
-    //     public async Task OnConnected([SignalRTrigger] InvocationContext invocationContext, ILogger logger)
-    //     {
-    //         // await Clients.All.SendAsync(NewConnectionTarget, new NewConnection(invocationContext.ConnectionId));
-    //         logger.LogInformation($"{invocationContext.ConnectionId} has connected");
-    //     }
-
-    //     [FunctionName(nameof(OtherHub) + nameof(Broadcast))]
-    //     public async Task Broadcast([SignalRTrigger] InvocationContext invocationContext, string message, ILogger logger)
-    //     {
-    //         // await Clients.All.SendAsync(NewMessageTarget, new NewMessage(invocationContext, message));
-    //         logger.LogInformation($"{invocationContext.ConnectionId} broadcast {message}");
-    //     }
-
-    //     [FunctionName(nameof(OtherHub) + nameof(OnDisconnected))]
-    //     public void OnDisconnected([SignalRTrigger] InvocationContext invocationContext)
-    //     {
-    //     }
-    // }
 }
