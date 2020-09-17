@@ -1,6 +1,8 @@
 <template>
     <div>
         <div>
+            <fast-button appearance="primary" @click="clear">Clear</fast-button>
+            <fast-button appearance="primary" @click="random">Random</fast-button>
             <fieldset style="display: inline-block;">
                 <legend>Genders</legend>
                 <template v-for="item in genders" :key="item">
@@ -263,6 +265,12 @@ export default defineComponent({
             selectedGenders,
             publishers,
             selectedPublishers,
+            async random() {
+                await fetch(`${process.env.VUE_APP_API_URL ?? '/api'}/RandomHeros?count=12`, { method: 'POST' });
+            },
+            async clear() {
+                await fetch(`${process.env.VUE_APP_API_URL ?? '/api'}/ClearHeros`, { method: 'POST' });
+            },
         };
     },
     components: {

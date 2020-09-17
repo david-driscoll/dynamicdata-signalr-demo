@@ -58,7 +58,7 @@ Content-Type: application/json
 ###
 
 
-POST https://superherosdd.azurewebsites.net/api/RandomHeros?count=20  HTTP/1.1
+POST https://superherosdd.azurewebsites.net/api/RandomHeros?count=12  HTTP/1.1
 Content-Type: application/json
 
 
