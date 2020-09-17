@@ -110,7 +110,7 @@ import Hero from '@/components/Hero.vue'; // @ is an alias to /src
 export default defineComponent({
     name: 'Home',
     async setup() {
-        const connection = new HubConnectionBuilder().withUrl('/api').build();
+        const connection = new HubConnectionBuilder().withUrl(process.env.API_URL ?? '/api').build();
 
         const cd = new CompositeDisposable();
 
