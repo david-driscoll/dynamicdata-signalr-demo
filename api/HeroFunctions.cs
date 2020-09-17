@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -122,7 +122,7 @@ namespace api.Functions
                     new ChangeSet<Hero, string>(items.Select(hero => new Change<Hero, string>(ChangeReason.Add, hero.Id, hero))),
                     cancellationToken
                 );
-                await Task.Delay(500); // simulate a delay for effect!
+                await Task.Delay(400); // simulate a delay for effect!
             }
 
             return new OkObjectResult(records);
@@ -168,6 +168,7 @@ namespace api.Functions
                 {
                     deletions.Add(item);
                     await container.DeleteItemAsync<Hero>(item.Id, new Microsoft.Azure.Cosmos.PartitionKey(item.Race), cancellationToken: cancellationToken);
+                    await Task.Delay(150);
                 }
 
                 await hub.Clients.All.SendAsync("heroesStream", new ChangeSet<Hero, string>(deletions.Select(z => new Change<Hero, string>(ChangeReason.Remove, z.Id, z))), cancellationToken);

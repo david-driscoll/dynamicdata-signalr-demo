@@ -16,17 +16,17 @@ namespace api
 {
     public static class dumpConfig
     {
-        [FunctionName("dumpConfig")]
-        public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
-            ILogger log)
-        {
-            var sb = new StringBuilder();
-            foreach (DictionaryEntry item in Environment.GetEnvironmentVariables())
-            {
-                sb.AppendLine($"{item.Key}: {item.Value}");
-            }
-            return new OkObjectResult(sb.ToString());
-        }
+        // [FunctionName("dumpConfig")]
+        // public static async Task<IActionResult> Run(
+        //     [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
+        //     ILogger log)
+        // {
+        //     var sb = new StringBuilder();
+        //     foreach (DictionaryEntry item in Environment.GetEnvironmentVariables())
+        //     {
+        //         sb.AppendLine($"{item.Key}: {item.Value}");
+        //     }
+        //     return new OkObjectResult(sb.ToString());
+        // }
     }
 }
