@@ -7,7 +7,6 @@ import {
     FASTAccordionItem,
     FASTBadge,
     FASTCheckbox,
-    FASTDesignSystem,
     FASTDialog,
     FASTDivider,
     FASTFlipper,
