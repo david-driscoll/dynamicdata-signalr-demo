@@ -8,7 +8,7 @@ on:
 jobs:
   build_and_deploy_web:
     runs-on: ubuntu-latest
-    name: Build and Deploy Job
+    name: Build and Deploy Web
     steps:
       - uses: actions/checkout@v2
         with:
@@ -29,7 +29,7 @@ jobs:
 
   build_and_deploy_api:
     runs-on: ubuntu-latest
-    name: Build and Deploy Job
+    name: Build and Deploy Api
     steps:
       - name: 'Login via Azure CLI'
         uses: azure/login@v1
