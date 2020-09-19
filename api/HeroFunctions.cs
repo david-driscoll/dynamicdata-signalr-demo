@@ -18,6 +18,7 @@ using System.Linq;
 using Microsoft.Azure.Documents;
 using System.Net.Http;
 using Bogus;
+using Bogus.Extensions;
 
 namespace api.Functions
 {
@@ -148,7 +149,7 @@ namespace api.Functions
                 Hero parent = null;
                 if (heros.Count > 0)
                 {
-                    parent = faker.PickRandom(heros);
+                    parent = faker.PickRandom(heros).OrNull(faker, 0.1f);
                 }
                 records.Add(await GenerateHero(container, client, id.ToString(), parent?.Id, cancellationToken));
             }
@@ -182,7 +183,7 @@ namespace api.Functions
                 Hero parent = null;
                 if (heros.Count > 0)
                 {
-                    parent = faker.PickRandom(heros);
+                    parent = faker.PickRandom(heros).OrNull(faker, 0.1f);
                 }
                 records.Add(await GenerateHero(container, client, id, parent?.Id, cancellationToken));
             }
