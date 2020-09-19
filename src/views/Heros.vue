@@ -49,15 +49,31 @@
             </fieldset>
         </div>
     </div>
-    <div class="heroes">
-        <transition-group name="hero">
-            <Hero v-for="hero in heroes" :key="hero.name" :hero="hero" class="hero" />
-        </transition-group>
+    <div style="flex-direction: row; display: flex;">
+        <div class="heros">
+            <transition-group name="hero">
+                <Hero
+                    v-for="hero in heros"
+                    :key="hero.name"
+                    :hero="hero"
+                    class="hero"
+                    @click="selectedHero = hero"
+                />
+            </transition-group>
+        </div>
+        <div v-if="selectedHero">
+            <EditHero
+                :hero="selectedHero"
+                :heros="heros"
+                @save="save(selectedHero)"
+                @cancel="selectedHero = null"
+            />
+        </div>
     </div>
 </template>
 
 <style scoped>
-.heroes {
+.heros {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
@@ -81,36 +97,30 @@
 </style>
 
 <script lang="ts">
-import { defineComponent, ref, onBeforeMount, onUnmounted, reactive, computed, watch } from 'vue';
+import { defineComponent, ref, onUnmounted, reactive, watch } from 'vue';
 import {
     bind,
-    Change,
-    SourceCache,
-    NotifyChanged,
     asObservableCache,
     IChangeSet,
     CompositeDisposable,
     transform,
     distinctValues,
-    keyValueComparer,
     filterDynamic,
     sort,
     defaultComparer,
     bindSort,
-    toSortedCollection,
     SortComparer,
-    transformMany,
+    observePropertyChanges,
+    autoRefresh,
 } from 'dynamicdatajs';
-import { from, toArray } from 'ix/iterable';
-import { filter as ixFilter, map as ixMap } from 'ix/iterable/operators';
 import { AsyncSubject, Observable, Subject, of } from 'rxjs';
-import { distinct, take, tap } from 'rxjs/operators';
 import { Hero as HeroModel } from '../entities';
 import { HubConnectionBuilder } from '@microsoft/signalr';
 import Hero from '@/components/Hero.vue'; // @ is an alias to /src
+import EditHero from '@/components/EditHero.vue';
 
 export default defineComponent({
-    name: 'Home',
+    name: 'Heros',
     async setup() {
         const connection = new HubConnectionBuilder().withUrl(process.env.VUE_APP_API_URL ?? '/api').build();
 
@@ -122,13 +132,91 @@ export default defineComponent({
         const selectedGenders = reactive<{ [key: string]: boolean }>({});
         const refilter = new Subject<unknown>();
 
-        const heroes = ref<HeroModel[]>([]);
+        const heros = ref<HeroModel[]>([]);
         const alignments = ref<string[]>([]);
         const races = ref<string[]>([]);
         const genders = ref<string[]>([]);
         const publishers = ref<string[]>([]);
 
         const started = new AsyncSubject<unknown>();
+
+        const heroStream = new Observable<IChangeSet<HeroModel, string>>(observer => {
+            const handler = (hero: IChangeSet<HeroModel, string>) => {
+                observer.next(hero);
+                if (started.isStopped) return;
+                started.next(void 0);
+                started.complete();
+            };
+            connection.on('herosStream', handler);
+
+            return () => {
+                connection.off('herosStream', handler);
+            };
+        });
+
+        const cache = asObservableCache(heroStream);
+        const stream = cache.connect().pipe(transform(observePropertyChanges), autoRefresh());
+        cd.add(
+            stream
+                .pipe(
+                    transform(z => z.alignment),
+                    distinctValues(z => z),
+                    sort(defaultComparer),
+                    bindSort(alignments.value),
+                )
+                .subscribe(),
+        );
+        cd.add(
+            stream
+                .pipe(
+                    transform(z => z.gender),
+                    distinctValues(z => z),
+                    sort(defaultComparer),
+                    bindSort(genders.value),
+                )
+                .subscribe(),
+        );
+        cd.add(
+            stream
+                .pipe(
+                    transform(z => z.publisher),
+                    distinctValues(z => z),
+                    sort(defaultComparer),
+                    bindSort(publishers.value),
+                )
+                .subscribe(),
+        );
+        cd.add(
+            stream
+                .pipe(
+                    transform(z => z.race),
+                    distinctValues(z => z),
+                    sort(defaultComparer),
+                    bindSort(races.value),
+                )
+                .subscribe(),
+        );
+        cd.add(
+            stream
+                .pipe(
+                    filterDynamic(
+                        of(hero => {
+                            return (
+                                (selectedAlignments[hero.alignment] === undefined || selectedAlignments[hero.alignment]) &&
+                                (selectedGenders[hero.gender] === undefined || selectedGenders[hero.gender]) &&
+                                (selectedPublishers[hero.publisher] === undefined || selectedPublishers[hero.publisher]) &&
+                                (selectedRaces[hero.race] === undefined || selectedRaces[hero.race])
+                            );
+                        }),
+                        refilter,
+                    ),
+                    sort(SortComparer.ascending('name'), undefined, refilter),
+                    // toSortedCollection(z => z.name, 'asc'),
+                    bind(heros.value),
+                )
+                // .subscribe(z => (heros.value = z))
+                .subscribe(),
+        );
 
         cd.add(
             watch(
@@ -153,87 +241,6 @@ export default defineComponent({
             ),
         );
 
-        const heroStream = new Observable<IChangeSet<HeroModel, string>>(observer => {
-            const handler = (hero: IChangeSet<HeroModel, string>) => {
-                observer.next(hero);
-                if (started.isStopped) return;
-                started.next(void 0);
-                started.complete();
-            };
-            connection.on('heroesStream', handler);
-
-            return () => {
-                connection.off('heroesStream', handler);
-            };
-        });
-
-        const cache = asObservableCache(heroStream);
-        cd.add(
-            cache
-                .connect()
-                .pipe(
-                    transform(z => z.alignment),
-                    distinctValues(z => z),
-                    sort(defaultComparer),
-                    bindSort(alignments.value),
-                )
-                .subscribe(),
-        );
-        cd.add(
-            cache
-                .connect()
-                .pipe(
-                    transform(z => z.gender),
-                    distinctValues(z => z),
-                    sort(defaultComparer),
-                    bindSort(genders.value),
-                )
-                .subscribe(),
-        );
-        cd.add(
-            cache
-                .connect()
-                .pipe(
-                    transform(z => z.publisher),
-                    distinctValues(z => z),
-                    sort(defaultComparer),
-                    bindSort(publishers.value),
-                )
-                .subscribe(),
-        );
-        cd.add(
-            cache
-                .connect()
-                .pipe(
-                    transform(z => z.race),
-                    distinctValues(z => z),
-                    sort(defaultComparer),
-                    bindSort(races.value),
-                )
-                .subscribe(),
-        );
-        cd.add(
-            cache
-                .connect()
-                .pipe(
-                    filterDynamic(
-                        of(hero => {
-                            return (
-                                (selectedAlignments[hero.alignment] === undefined || selectedAlignments[hero.alignment]) &&
-                                (selectedGenders[hero.gender] === undefined || selectedGenders[hero.gender]) &&
-                                (selectedPublishers[hero.publisher] === undefined || selectedPublishers[hero.publisher]) &&
-                                (selectedRaces[hero.race] === undefined || selectedRaces[hero.race])
-                            );
-                        }),
-                        refilter,
-                    ),
-                    sort(SortComparer.ascending('name'), undefined, refilter),
-                    // toSortedCollection(z => z.name, 'asc'),
-                    bindSort(heroes.value, bind.deepEqualAdapter(heroes.value)),
-                )
-                // .subscribe(z => (heroes.value = z))
-                .subscribe(),
-        );
         onUnmounted(() => {
             connection.stop();
             cd.dispose();
@@ -254,9 +261,11 @@ export default defineComponent({
         //     selectedPublishers[team] = true;
         // }
 
+        const selectedHero = ref<HeroModel | null>(null);
+
         return {
             connection,
-            heroes,
+            heros,
             alignments,
             selectedAlignments,
             races,
@@ -265,16 +274,22 @@ export default defineComponent({
             selectedGenders,
             publishers,
             selectedPublishers,
+            selectedHero,
             async random() {
                 await fetch(`${process.env.VUE_APP_API_URL ?? '/api'}/RandomHeros?count=12`, { method: 'POST' });
             },
             async clear() {
                 await fetch(`${process.env.VUE_APP_API_URL ?? '/api'}/ClearHeros`, { method: 'POST' });
             },
+            async save(hero: HeroModel) {
+                await fetch(`${process.env.VUE_APP_API_URL ?? '/api'}/UpdateHero`, { method: 'POST', body: JSON.stringify(hero) });
+                selectedHero.value = null;
+            },
         };
     },
     components: {
         Hero,
+        EditHero,
     },
 });
 </script>

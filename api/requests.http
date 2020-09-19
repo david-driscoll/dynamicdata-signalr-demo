@@ -45,7 +45,7 @@ Content-Type: application/json
 ###
 
 
-GET http://localhost:7071/api/ListHeroes HTTP/1.1
+GET http://localhost:7071/api/ListHeros HTTP/1.1
 Content-Type: application/json
 
 

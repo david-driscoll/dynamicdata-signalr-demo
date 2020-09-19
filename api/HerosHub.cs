@@ -46,7 +46,7 @@ namespace api
                 {
                     changes.Add(new Change<Hero, string>(ChangeReason.Add, item.Id, item));
                 }
-                await Clients.Client(invocationContext.ConnectionId).SendAsync("heroesStream", new ChangeSet<Hero, string>(changes), cancellationToken);
+                await Clients.Client(invocationContext.ConnectionId).SendAsync("herosStream", new ChangeSet<Hero, string>(changes), cancellationToken);
             }
 
             logger.LogInformation($"{invocationContext.ConnectionId} has connected");

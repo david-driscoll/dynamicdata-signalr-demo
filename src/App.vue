@@ -1,7 +1,7 @@
 <template>
     <div id="nav">
-        <router-link to="/">Home</router-link>|
-        <router-link to="/about">About</router-link>
+        <router-link to="/">Heros</router-link>|
+        <router-link to="/hero-tree">Hero Tree</router-link>
     </div>
 
     <Suspense>
@@ -65,5 +65,9 @@ body {
 
 #nav a.router-link-exact-active {
     color: #42b983;
+}
+
+fieldset {
+    color: white;
 }
 </style>

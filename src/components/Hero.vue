@@ -1,6 +1,6 @@
 <template>
     <fast-card>
-        <img :src="hero.avatarUrl" />
+        <img :src="hero.avatarUrl" @click="select()" />
         <div style="padding: 0 10px 10px; color: var(--neutral-foreground-rest)">
             <h4>{{hero.name}}</h4>
             <p>{{hero.alignment}} | {{hero.gender}} | {{hero.race}}</p>
@@ -26,9 +26,16 @@ export default defineComponent({
             type: Object as PropType<Hero>,
             required: true,
         },
+        click: {
+            type: Function as PropType<() => void>,
+        },
     },
     setup(props) {
-        return {};
+        return {
+            select() {
+                return props.click?.();
+            },
+        };
     },
 });
 </script>

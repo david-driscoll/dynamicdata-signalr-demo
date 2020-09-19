@@ -1,5 +1,6 @@
 export interface Hero {
     id: string;
+    leaderId?: string | undefined;
     superHeroApiId?: number;
     name: string;
     realName: string;

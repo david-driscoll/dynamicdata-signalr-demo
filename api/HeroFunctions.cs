@@ -32,8 +32,8 @@ namespace api.Functions
             this.httpClientFactory = httpClientFactory;
         }
 
-        [FunctionName(nameof(ListHeroes))]
-        public async Task<ActionResult<IEnumerable<Hero>>> ListHeroes([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequest req, CancellationToken cancellationToken)
+        [FunctionName(nameof(ListHeros))]
+        public async Task<ActionResult<IEnumerable<Hero>>> ListHeros([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequest req, CancellationToken cancellationToken)
         {
             var container = cosmosClient.GetDatabase("Heros").GetContainer("Heros");
             var changes = new List<Hero>();
@@ -50,17 +50,34 @@ namespace api.Functions
             return new OkObjectResult(changes);
         }
 
+        [FunctionName(nameof(GetApiHero))]
+        public async Task<ActionResult<SuperHeroRecord>> GetApiHero([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequest req, CancellationToken cancellationToken)
+        {
+            var id = req.Query["id"].ToString();
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                var random = new Random();
+                id = random.Next(1, 731).ToString();
+            }
+
+            var client = httpClientFactory.CreateClient("SuperHeroApi");
+            var result = await client.GetAsync(id);
+            var record = await result.Content.ReadAsAsync<SuperHeroRecord>();
+
+            return new OkObjectResult(record);
+        }
+
         [FunctionName(nameof(CreateHero))]
         public async Task<IActionResult> CreateHero([HttpTrigger(AuthorizationLevel.Anonymous, "post")] Hero hero, CancellationToken cancellationToken)
         {
             var container = cosmosClient.GetDatabase("Heros").GetContainer("Heros");
             hero.Id = Guid.NewGuid().ToString();
-            hero.Created = DateTimeOffset.Now;
+            hero.Created = DateTimeOffset.Now.ToString("u");
             var result = await container.CreateItemAsync(hero, cancellationToken: cancellationToken);
 
             var hub = await StaticServiceHubContextStore.Get().GetAsync(nameof(HerosHub));
             await hub.Clients.All.SendAsync(
-                    "heroesStream",
+                    "herosStream",
                     new ChangeSet<Hero, string>() { new Change<Hero, string>(ChangeReason.Add, result.Resource.Id, result.Resource) },
                     cancellationToken
                 );
@@ -72,13 +89,20 @@ namespace api.Functions
         public async Task<IActionResult> UpdateHero([HttpTrigger(AuthorizationLevel.Anonymous, "post")] Hero hero, CancellationToken cancellationToken)
         {
             var container = cosmosClient.GetDatabase("Heros").GetContainer("Heros");
-            hero.Updated = DateTimeOffset.Now;
+            hero.Updated = DateTimeOffset.Now.ToString("u");
+
+
+            var originalHero = (await container.GetItemLinqQueryable<Hero>(requestOptions: new QueryRequestOptions() { MaxItemCount = Max_Page_Size })
+            .Where(z => z.Id == hero.Id)
+            .ToFeedIterator()
+            .ReadNextAsync(cancellationToken))?.SingleOrDefault();
+
             var result = await container.UpsertItemAsync(hero, cancellationToken: cancellationToken);
 
             var hub = await StaticServiceHubContextStore.Get().GetAsync(nameof(HerosHub));
             await hub.Clients.All.SendAsync(
-                    "heroesStream",
-                    new ChangeSet<Hero, string>() { new Change<Hero, string>(ChangeReason.Update, result.Resource.Id, result.Resource) },
+                    "herosStream",
+                    new ChangeSet<Hero, string>() { new Change<Hero, string>(ChangeReason.Update, result.Resource.Id, result.Resource, originalHero) },
                     cancellationToken
                 );
 
@@ -96,7 +120,7 @@ namespace api.Functions
             await container.DeleteItemAsync<Hero>(id, new Microsoft.Azure.Cosmos.PartitionKey(null), cancellationToken: cancellationToken);
 
             var hub = await StaticServiceHubContextStore.Get().GetAsync(nameof(HerosHub));
-            await hub.Clients.All.SendAsync("heroesStream", new ChangeSet<Hero, string>() { new Change<Hero, string>(ChangeReason.Remove, id, null) }, cancellationToken);
+            await hub.Clients.All.SendAsync("herosStream", new ChangeSet<Hero, string>() { new Change<Hero, string>(ChangeReason.Remove, id, null) }, cancellationToken);
             return new OkResult();
         }
 
@@ -118,7 +142,7 @@ namespace api.Functions
             foreach (var items in records.Buffer(Max_Page_Size))
             {
                 await hub.Clients.All.SendAsync(
-                    "heroesStream",
+                    "herosStream",
                     new ChangeSet<Hero, string>(items.Select(hero => new Change<Hero, string>(ChangeReason.Add, hero.Id, hero))),
                     cancellationToken
                 );
@@ -143,7 +167,7 @@ namespace api.Functions
 
             var hub = await StaticServiceHubContextStore.Get().GetAsync(nameof(HerosHub));
             await hub.Clients.All.SendAsync(
-                    "heroesStream",
+                    "herosStream",
                     new ChangeSet<Hero, string>(
                         records.Select(hero => new Change<Hero, string>(ChangeReason.Add, hero.Id, hero))
                     ),
@@ -171,7 +195,7 @@ namespace api.Functions
                     await Task.Delay(150);
                 }
 
-                await hub.Clients.All.SendAsync("heroesStream", new ChangeSet<Hero, string>(deletions.Select(z => new Change<Hero, string>(ChangeReason.Remove, z.Id, z))), cancellationToken);
+                await hub.Clients.All.SendAsync("herosStream", new ChangeSet<Hero, string>(deletions.Select(z => new Change<Hero, string>(ChangeReason.Remove, z.Id, z))), cancellationToken);
             }
 
 
@@ -216,7 +240,7 @@ namespace api.Functions
                 Id = record.Id.ToString(),
                 Alignment = record.Biography.Alignment,
                 AvatarUrl = record.Image?.Url.ToString(),
-                Created = DateTimeOffset.Now,
+                Created = DateTimeOffset.Now.ToString("u"),
                 Gender = record.Appearance.Gender == "null" ? "Unknown" : record.Appearance.Gender,
                 Race = record.Appearance.Race == "null" ? "Unknown" : record.Appearance.Race,
                 Powerstats = record.Powerstats,
@@ -238,17 +262,17 @@ namespace api.Functions
         //     ConnectionStringSetting = "CosmosDbConnectionString",
         //     LeaseCollectionName = "heros",
         //     CreateLeaseCollectionIfNotExists = true)]
-        //     IReadOnlyList<Document> heroes,
+        //     IReadOnlyList<Document> heros,
         //     CancellationToken cancellationToken)
         // {
-        //     if (heroes != null && heroes.Count > 0)
+        //     if (heros != null && heros.Count > 0)
         //     {
         //         var hub = await StaticServiceHubContextStore.Get().GetAsync(nameof(HerosHub));
 
         //         await hub.Clients.All.SendAsync(
-        //             "heroesStream",
+        //             "herosStream",
         //             new ChangeSet<Hero, string>(
-        //                 heroes
+        //                 heros
         //                     .Select(document => JsonConvert.DeserializeObject<Hero>(document.ToString()))
         //                     .Select(hero => hero.Updated.HasValue ? new Change<Hero, string>(ChangeReason.Update, hero.Id, hero, hero) : new Change<Hero, string>(ChangeReason.Add, hero.Id, hero))
         //             ),

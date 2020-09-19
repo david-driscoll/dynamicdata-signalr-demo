@@ -10,6 +10,9 @@ namespace api
         [JsonProperty("id")]
         public string Id { get; set; }
 
+        [JsonProperty("leaderId", NullValueHandling = NullValueHandling.Ignore)]
+        public string LeaderId { get; set; }
+
         [JsonProperty("superHeroApiId")]
         public long? SuperHeroApiId { get; set; }
 
@@ -41,10 +44,10 @@ namespace api
         public string AvatarUrl { get; set; }
 
         [JsonProperty("created")]
-        public DateTimeOffset Created { get; set; }
+        public string Created { get; set; }
 
         [JsonProperty("updated")]
-        public DateTimeOffset? Updated { get; set; }
+        public string Updated { get; set; }
     }
 
 
