@@ -17,6 +17,7 @@ using DynamicData;
 using System.Linq;
 using Microsoft.Azure.Documents;
 using System.Net.Http;
+using Bogus;
 
 namespace api.Functions
 {
@@ -25,6 +26,10 @@ namespace api.Functions
         private const int Max_Page_Size = 2;
         private readonly CosmosClient cosmosClient;
         private readonly IHttpClientFactory httpClientFactory;
+        private static Faker faker = new Faker()
+        {
+            Random = new Randomizer(1337)
+        };
 
         public HeroFunctions(CosmosClient cosmosClient, IHttpClientFactory httpClientFactory)
         {
@@ -34,6 +39,13 @@ namespace api.Functions
 
         [FunctionName(nameof(ListHeros))]
         public async Task<ActionResult<IEnumerable<Hero>>> ListHeros([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequest req, CancellationToken cancellationToken)
+        {
+            List<Hero> changes = await GetHeros(cancellationToken);
+
+            return new OkObjectResult(changes);
+        }
+
+        private async Task<List<Hero>> GetHeros(CancellationToken cancellationToken)
         {
             var container = cosmosClient.GetDatabase("Heros").GetContainer("Heros");
             var changes = new List<Hero>();
@@ -47,7 +59,7 @@ namespace api.Functions
                 }
             }
 
-            return new OkObjectResult(changes);
+            return changes;
         }
 
         [FunctionName(nameof(GetApiHero))]
@@ -56,8 +68,7 @@ namespace api.Functions
             var id = req.Query["id"].ToString();
             if (string.IsNullOrWhiteSpace(id))
             {
-                var random = new Random();
-                id = random.Next(1, 731).ToString();
+                id = faker.Random.Number(1, 731).ToString();
             }
 
             var client = httpClientFactory.CreateClient("SuperHeroApi");
@@ -129,12 +140,17 @@ namespace api.Functions
         {
             var container = cosmosClient.GetDatabase("Heros").GetContainer("Heros");
             var count = req.Query["count"];
-            var random = new Random();
             var client = httpClientFactory.CreateClient("SuperHeroApi");
             var records = new List<Hero>();
-            foreach (var id in Enumerable.Range(0, int.Parse(count)).Select(_ => random.Next(1, 731)))
+            var heros = await GetHeros(cancellationToken);
+            foreach (var id in Enumerable.Range(0, int.Parse(count)).Select(_ => faker.Random.Number(1, 731)))
             {
-                records.Add(await GenerateHero(container, client, id.ToString(), cancellationToken));
+                Hero parent = null;
+                if (heros.Count > 0)
+                {
+                    parent = faker.PickRandom(heros);
+                }
+                records.Add(await GenerateHero(container, client, id.ToString(), parent?.Id, cancellationToken));
             }
 
             var hub = await StaticServiceHubContextStore.Get().GetAsync(nameof(HerosHub));
@@ -158,11 +174,17 @@ namespace api.Functions
             var container = cosmosClient.GetDatabase("Heros").GetContainer("Heros");
             var ids = req.Query["id"].SelectMany(z => z.Split(','));
 
+            var heros = await GetHeros(cancellationToken);
             var client = httpClientFactory.CreateClient("SuperHeroApi");
             var records = new List<Hero>();
             foreach (var id in ids)
             {
-                records.Add(await GenerateHero(container, client, id, cancellationToken));
+                Hero parent = null;
+                if (heros.Count > 0)
+                {
+                    parent = faker.PickRandom(heros);
+                }
+                records.Add(await GenerateHero(container, client, id, parent?.Id, cancellationToken));
             }
 
             var hub = await StaticServiceHubContextStore.Get().GetAsync(nameof(HerosHub));
@@ -202,7 +224,7 @@ namespace api.Functions
             return new OkResult();
         }
 
-        private static async Task<Hero> GenerateHero(Container container, HttpClient client, string id, CancellationToken cancellationToken)
+        private static async Task<Hero> GenerateHero(Container container, HttpClient client, string id, string parentId, CancellationToken cancellationToken)
         {
             var result = await client.GetAsync(id);
             var record = await result.Content.ReadAsAsync<SuperHeroRecord>();
@@ -238,6 +260,7 @@ namespace api.Functions
             var hero = new Hero()
             {
                 Id = record.Id.ToString(),
+                LeaderId = parentId,
                 Alignment = record.Biography.Alignment,
                 AvatarUrl = record.Image?.Url.ToString(),
                 Created = DateTimeOffset.Now.ToString("u"),
